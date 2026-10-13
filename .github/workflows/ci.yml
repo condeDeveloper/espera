@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.so }}
+
+    # bash nos tres sistemas: no Windows o shell padrao e o PowerShell, e ele
+    # desmonta "-Dexec.args=..." em dois argumentos antes de o Maven ver.
+    defaults:
+      run:
+        shell: bash
+
+    strategy:
+      fail-fast: false
+      matrix:
+        so: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+
+      - name: Testes
+        run: mvn -B -ntp verify
+
+      - name: a lei de Little vale em toda configuracao
+        run: mvn -B -ntp -q exec:java -Dexec.args="correcao"
+
+      - name: a fila por utilizacao
+        run: mvn -B -ntp -q exec:java -Dexec.args="utilizacao"
+
+      - name: a fila por variabilidade
+        run: mvn -B -ntp -q exec:java -Dexec.args="variabilidade"
+
+      - name: um servidor rapido contra dois lentos
+        run: mvn -B -ntp -q exec:java -Dexec.args="servidores"
+
+      - name: a ordem de atendimento
+        run: mvn -B -ntp -q exec:java -Dexec.args="disciplina"
+
+      - name: Relatorios de teste
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports-${{ matrix.so }}
+          path: target/surefire-reports
